@@ -12,7 +12,12 @@ class NoteController extends Controller
      */
     public function index()
     {
-        return 'index';
+        $notes = Note::query()
+            ->where('user_id', request()->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(); //paginate - deafult value is 15, but can put other value inside the bracket
+        // dd($notes); //dd - dump and die (debugging tool)
+        return view('note.index', ['notes' => $notes]); // view('note.index') -> view('folder.file')
     }
 
     /**
@@ -20,7 +25,7 @@ class NoteController extends Controller
      */
     public function create()
     {
-        return 'create';
+        return view('note.create');
     }
 
     /**
@@ -28,23 +33,37 @@ class NoteController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $data = $request->validate([
+            'note' => ['required', 'string']
+        ]);
+
+        $data['user_id'] = $request->user()->id;
+
+        $note = Note::create($data);
+
+        return to_route('note.show', $note)->with('message', 'Note created successfully');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Note $note)
+    public function show(Note $note) //
     {
-        return 'show';
+        if ($note->user_id !== request()->user()->id) {
+            abort(403);
+        }
+        return view('note.show', ['note' => $note]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Note $note)
+    public function edit(Note $note) //
     {
-        return 'edit';
+        if ($note->user_id !== request()->user()->id) {
+            abort(403);
+        }
+        return view('note.edit', ['note' => $note]);
     }
 
     /**
@@ -52,7 +71,17 @@ class NoteController extends Controller
      */
     public function update(Request $request, Note $note)
     {
-        //
+        $data = $request->validate([
+            'note' => ['required', 'string']
+        ]);
+
+        if ($note->user_id !== request()->user()->id) {
+            abort(403);
+        }
+
+        $note->update($data);
+
+        return to_route('note.show', $note)->with('message', 'Note updated successfully');
     }
 
     /**
@@ -60,6 +89,10 @@ class NoteController extends Controller
      */
     public function destroy(Note $note)
     {
-        //
+        if ($note->user_id !== request()->user()->id) {
+            abort(403);
+        }
+        $note->delete();
+        return to_route('note.index')->with('message', 'Note deleted');
     }
 }
